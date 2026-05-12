@@ -50,9 +50,18 @@ class Elementor_Serializer {
             }
         }
 
-        // Flush Elementor cache for this post.
-        if ( class_exists( '\Elementor\Plugin' ) ) {
-            \Elementor\Plugin::$instance->db->clear_cache( $post_id );
+        // Delete only this post's generated CSS file so Elementor regenerates it on
+        // the next page view. Avoid clearing the global cache — that would delete
+        // the kit/global CSS files and break the entire site layout until they are
+        // regenerated, which is not acceptable during a restore operation.
+        if ( class_exists( '\Elementor\Core\Files\CSS\Post' ) ) {
+            \Elementor\Core\Files\CSS\Post::create( $post_id )->delete();
+        } elseif ( class_exists( '\Elementor\Plugin' ) && isset( \Elementor\Plugin::$instance ) ) {
+            // Elementor 2.x legacy fallback.
+            $elementor = \Elementor\Plugin::$instance;
+            if ( isset( $elementor->db ) && method_exists( $elementor->db, 'clear_cache' ) ) {
+                $elementor->db->clear_cache( $post_id );
+            }
         }
     }
 

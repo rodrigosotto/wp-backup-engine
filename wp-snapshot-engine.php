@@ -1,10 +1,10 @@
 <?php
 /**
  * Plugin Name: WP Snapshot Engine
- * Plugin URI:  https://github.com/your-org/wp-snapshot-engine
+ * Plugin URI:  https://github.com/rodrigosotto/wp-snapshot-engine
  * Description: Professional version control for WordPress and Elementor — automatic incremental snapshots with a modern visual timeline.
  * Version:     1.0.0
- * Author:      Your Name
+ * Author:      Jefferson Rodrigo Sotto
  * License:     GPL-2.0+
  * Text Domain: wp-snapshot-engine
  */

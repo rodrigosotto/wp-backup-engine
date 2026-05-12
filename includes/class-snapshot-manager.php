@@ -10,9 +10,21 @@ class Snapshot_Manager {
 
     /** Options that are too noisy to snapshot. */
     private const IGNORED_OPTIONS = [
+        // WordPress internals
         'cron', '_transient_', '_site_transient_', 'active_plugins',
         'recently_edited', 'auto_updated_core_time',
+        // Elementor internal cache / log options that update on every save
+        '_elementor_assets_data',
+        'elementor_log',
+        'elementor_atomic_cache_validity_',
+        'elementor_css_print_method',
+        // Third-party options triggered as side-effects of Elementor saves
+        'jetpack_boost_ds_critical_css_suggest_regenerate',
+        'image_optimizer_optimization_stats',
     ];
+
+    /** Tracks post IDs already snapshotted via Elementor in this request. */
+    private array $elementor_saved = [];
 
     public function __construct( private Snapshot_Service $service ) {}
 
@@ -36,6 +48,10 @@ class Snapshot_Manager {
      * @param array $editor_data (Elementor passes this, but we re-capture from DB for consistency)
      */
     public function on_elementor_save( int $post_id, array $editor_data ): void {
+        // Prevent duplicate snapshots if the hook fires more than once per request for the same post.
+        if ( isset( $this->elementor_saved[ $post_id ] ) ) return;
+        $this->elementor_saved[ $post_id ] = true;
+
         $group_id = 'elementor_' . $post_id . '_' . time();
         $this->service->snapshot_post( $post_id, $group_id );
     }
