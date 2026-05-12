@@ -50,12 +50,16 @@ class Elementor_Serializer {
             }
         }
 
-        // Delete only this post's generated CSS file so Elementor regenerates it on
-        // the next page view. Avoid clearing the global cache — that would delete
-        // the kit/global CSS files and break the entire site layout until they are
-        // regenerated, which is not acceptable during a restore operation.
+        // Clear the `_elementor_css` post meta so Elementor does not treat a
+        // stale CSS entry as still valid after the data has been restored.
+        delete_post_meta( $post_id, '_elementor_css' );
+
+        // Immediately regenerate the post CSS file from the restored _elementor_data.
+        // Using update() rather than delete() ensures the fresh CSS file exists before
+        // the next page view, preventing the broken-layout window that occurs when the
+        // file is absent and Elementor fails to recreate it on-the-fly.
         if ( class_exists( '\Elementor\Core\Files\CSS\Post' ) ) {
-            \Elementor\Core\Files\CSS\Post::create( $post_id )->delete();
+            \Elementor\Core\Files\CSS\Post::create( $post_id )->update();
         } elseif ( class_exists( '\Elementor\Plugin' ) && isset( \Elementor\Plugin::$instance ) ) {
             // Elementor 2.x legacy fallback.
             $elementor = \Elementor\Plugin::$instance;
