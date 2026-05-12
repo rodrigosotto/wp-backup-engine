@@ -50,22 +50,25 @@ class Elementor_Serializer {
             }
         }
 
-        // Clear the `_elementor_css` post meta so Elementor does not treat a
-        // stale CSS entry as still valid after the data has been restored.
+        // Invalidate Elementor's cached CSS for this post so it is regenerated on the
+        // next frontend page view — where Elementor is fully initialised (all widgets
+        // registered) and can produce correct CSS from the restored _elementor_data.
+        //
+        // We intentionally do NOT call Post::create()->update() here: that API runs
+        // inside the REST API request context, where Elementor does not register its
+        // widget types, causing it to emit empty / broken CSS that then gets persisted
+        // and served on subsequent views without a further regeneration attempt.
+        //
+        // Two storage locations must be cleared to cover both Elementor CSS modes:
+        //   1. `_elementor_css` post meta  — used by inline / atomic CSS mode
+        //   2. post-{ID}.css file          — used by file-based CSS mode
         delete_post_meta( $post_id, '_elementor_css' );
 
-        // Immediately regenerate the post CSS file from the restored _elementor_data.
-        // Using update() rather than delete() ensures the fresh CSS file exists before
-        // the next page view, preventing the broken-layout window that occurs when the
-        // file is absent and Elementor fails to recreate it on-the-fly.
-        if ( class_exists( '\Elementor\Core\Files\CSS\Post' ) ) {
-            \Elementor\Core\Files\CSS\Post::create( $post_id )->update();
-        } elseif ( class_exists( '\Elementor\Plugin' ) && isset( \Elementor\Plugin::$instance ) ) {
-            // Elementor 2.x legacy fallback.
-            $elementor = \Elementor\Plugin::$instance;
-            if ( isset( $elementor->db ) && method_exists( $elementor->db, 'clear_cache' ) ) {
-                $elementor->db->clear_cache( $post_id );
-            }
+        $upload     = wp_get_upload_dir();
+        $css_path   = $upload['basedir'] . '/elementor/css/post-' . $post_id . '.css';
+        if ( file_exists( $css_path ) ) {
+            // phpcs:ignore WordPress.WP.AlternativeFunctions.unlink_unlink
+            @unlink( $css_path );
         }
     }
 
